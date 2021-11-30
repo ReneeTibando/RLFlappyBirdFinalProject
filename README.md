@@ -1,5 +1,8 @@
 # RLFlappyBirdFinalProject
-<h3>Installation Dependencies:</h3>
+<h2>Flappy Bird Using Deep Q-Learning</h2>
+<p>The code in this repository is used to train the agent to play FlappyBird using techniques from reinforcement learning. It implements deep q-learning.</p>
+
+<h2>Installation Dependencies:</h2>
 In order to run the code you will need the following dependencies:
 <ul>
 <li>Python 2.7 or 3</li>
@@ -11,7 +14,7 @@ In order to run the code you will need the following dependencies:
 <li>Torch</li>
 </ul>
 
-<h3>How to Run?</h3>
+<h2>How to Run?</h2>
 <p>To get the model for deep q to start training run:
 <div class="snippet-clipboard-content position-relative overflow-auto"><pre><code>python deepqlearn.py train
 </code></pre><div class="zeroclipboard-container position-absolute right-0 top-0">
