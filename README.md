@@ -1,5 +1,4 @@
 # RLFlappyBirdFinalProject
-<h2>Flappy Bird Using Deep Q-Learning</h2>
 <p>The code in this repository is used to train the agent to play FlappyBird using techniques from reinforcement learning. It implements deep q-learning.</p>
 
 <h2>Installation Dependencies:</h2>
