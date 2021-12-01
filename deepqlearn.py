@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 # this allows for the constant running of the flappy bird environment
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-class QNetwork(nn.Module):
+class DeepQNetwork(nn.Module):
 
     def __init__(self):
         # make an instance of the object QNetwork
-        super(QNetwork, self).__init__()
+        super(DeepQNetwork, self).__init__()
         
         # setting a discount factor
         self.gamma = 0.99
@@ -39,8 +39,8 @@ class QNetwork(nn.Module):
         # lets us use the torch functions
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # using 4 convolutional layers that are stacked on top of one another to create the neural network
-        # the parameters are us setting the networks
+        # using 3 convolutional layers that are stacked on top of one another to create the neural network
+        # the parameters are us setting in_channels, out_channels, kernel_size, stride
         self.conv1 = nn.Conv2d(4, 32, 8, 4)
         self.conv2 = nn.Conv2d(32, 64, 4, 2)
         self.conv3 = nn.Conv2d(64, 64, 3, 1)
@@ -73,34 +73,34 @@ class QNetwork(nn.Module):
 # this allows for us to represent the transition from the state action pair to the their next state and reward
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'terminal'))
 
-class ReplayMemory:
+class Memory:
     """
     Using a cyclic buffer of a specific size that stores the possible transitions we have observed for
     a state, action pair
     """
 
     def __init__(self, capacity):
-        self.capacity = capacity
-        self.memory = []
+        self.buffcapacity = capacity
+        self.mem = []
         self.position = 0
 
     def push(self, *args):
         """saves the transition in memory and sets the next position"""
 
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
+        if len(self.mem) < self.buffcapacity:
+            self.mem.append(None)
 
         # set the next position in memory to the output given by the transition
-        self.memory[self.position] = Transition(*args)
-        self.position = (self.position + 1) % self.capacity
+        self.mem[self.position] = Transition(*args)
+        self.position = (self.position + 1) % self.buffcapacity
 
     def sample(self, batch_size):
         """Uses a random batch for transitions that we will use in order to train."""
-        return random.sample(self.memory, batch_size)
+        return random.sample(self.mem, batch_size)
 
     def __len__(self):
         """return the length of the memory"""
-        return len(self.memory)
+        return len(self.mem)
 
 def init_weights(m):
     # initialize the weights and the bias based on the type of layer
@@ -110,12 +110,12 @@ def init_weights(m):
 
 def image_to_tensor(image):
     """Converts image to tensor which allows for the image to be compatible with PyTorch"""
-    image_tensor = image.transpose(2, 0, 1)
-    image_tensor = image_tensor.astype(np.float32)
-    image_tensor = torch.from_numpy(image_tensor)
+    imageTensor = image.transpose(2, 0, 1)
+    imageTensor = imageTensor.astype(np.float32)
+    imageTensor = torch.from_numpy(imageTensor)
     if torch.cuda.is_available():
-        image_tensor = image_tensor.cuda()
-    return image_tensor
+        imageTensor = imageTensor.cuda()
+    return imageTensor
 
 def resize_and_bgr2gray(image):
     """
@@ -126,10 +126,10 @@ def resize_and_bgr2gray(image):
     # Crop out the floor
     image = image[0:288, 0:404]
     # Convert to grayscale and resize image
-    image_data = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
-    image_data[image_data > 0] = 255
-    image_data = np.reshape(image_data, (84, 84, 1))
-    return image_data
+    imageData = cv2.cvtColor(cv2.resize(image, (84, 84)), cv2.COLOR_BGR2GRAY)
+    imageData[imageData > 0] = 255
+    imageData = np.reshape(imageData, (84, 84, 1))
+    return imageData
 
 def train(net, start):
     """ 
@@ -142,22 +142,22 @@ def train(net, start):
     loss_func = nn.MSELoss()
 
     # Calls the game state class
-    game_state = game.GameState()
+    gameState = game.GameState()
 
     # Calls the Replay memory class
-    memory = ReplayMemory(net.replay_memory_size)
+    memory = Memory(net.replay_memory_size)
 
     # Sets the intial actions to do nothing
     action = torch.zeros(2, dtype=torch.float32)
     action[0] = 1
 
     # 2 action choices: Do nothing or fly up
-    image_data, reward, terminal = game_state.frame_step(action)
+    imageData, reward, terminal = gameState.frame_step(action)
 
     # Sets up the image preprocessing using the previous functions
-    image_data = resize_and_bgr2gray(image_data)
-    image_data = image_to_tensor(image_data)
-    state = torch.cat((image_data, image_data, image_data, image_data)).unsqueeze(0)
+    imageData = resize_and_bgr2gray(imageData)
+    imageData = image_to_tensor(imageData)
+    state = torch.cat((imageData, imageData, imageData, imageData)).unsqueeze(0)
 
     # Calls the epsilon value
     epsilon = net.initial_epsilon
@@ -194,10 +194,10 @@ def train(net, start):
         action[action_index] = 1
 
         # Retrive the next state and the reward that comes with it
-        image_data_1, reward, terminal = game_state.frame_step(action)
-        image_data_1 = resize_and_bgr2gray(image_data_1)
-        image_data_1 = image_to_tensor(image_data_1)
-        state_1 = torch.cat((state.squeeze(0)[1:, :, :], image_data_1)).unsqueeze(0)
+        imageNext, reward, terminal = gameState.frame_step(action)
+        imageNext = resize_and_bgr2gray(imageNext)
+        imageNext = image_to_tensor(imageNext)
+        state_1 = torch.cat((state.squeeze(0)[1:, :, :], imageNext)).unsqueeze(0)
 
         action = action.unsqueeze(0)
         reward = torch.from_numpy(np.array([reward], dtype=np.float32)).unsqueeze(0)
@@ -316,10 +316,10 @@ def test(net):
         action[action_index] = 1
 
         # next state
-        image_data_1, reward, terminal = game_state.frame_step(action)
-        image_data_1 = resize_and_bgr2gray(image_data_1)
-        image_data_1 = image_to_tensor(image_data_1)
-        state_1 = torch.cat((state.squeeze(0)[1:, :, :], image_data_1)).unsqueeze(0)
+        imageNext, reward, terminal = game_state.frame_step(action)
+        imageNext = resize_and_bgr2gray(imageNext)
+        imageNext = image_to_tensor(imageNext)
+        state_1 = torch.cat((state.squeeze(0)[1:, :, :], imageNext)).unsqueeze(0)
 
         state = state_1
 
@@ -337,7 +337,7 @@ if __name__ == "__main__":
             os.mkdir('model_weights/')
 
         #calls and connects our network to cuda
-        Q = QNetwork()
+        Q = DeepQNetwork()
         Q.to(Q.device)
         Q.apply(init_weights)
         start = time.time()
